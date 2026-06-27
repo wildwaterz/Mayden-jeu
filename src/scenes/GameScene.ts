@@ -347,9 +347,10 @@ export class GameScene extends Phaser.Scene {
       .setDepth(100)
       .setAlpha(0);
 
-    // Top-right list of quests creatures are currently asking for.
+    // Bottom-right list of quests creatures are currently asking for
+    // (kept clear of the top-left HUD and the top-center toast).
     this.taskText = this.add
-      .text(GRID_PIXEL_WIDTH - 8, 8, "", {
+      .text(GRID_PIXEL_WIDTH - 8, GRID_PIXEL_HEIGHT - 8, "", {
         fontFamily: "monospace",
         fontSize: "11px",
         color: "#e8eef5",
@@ -357,7 +358,7 @@ export class GameScene extends Phaser.Scene {
         padding: { x: 6, y: 4 },
         align: "right",
       })
-      .setOrigin(1, 0)
+      .setOrigin(1, 1)
       .setDepth(100);
   }
 
