@@ -26,11 +26,22 @@ Then open the URL Vite prints (default http://localhost:5173).
 
 ## How to play (current slice)
 
+In-game text is in **French** (`français`). Controls:
+
 - Move the shapeshifter with the **arrow keys** or **WASD**.
-- Switch moves: **[1]** Leafage (grow grass), **[2]** Plant Tree.
-- Press **SPACE** to use the selected move on the tile you're standing on.
-- Grow grass on the 4 tiles around a tree to build a **Tree-Shaded Grass
-  habitat** — a wild creature will be attracted!
+- Switch ability: **[1]** Feuillage (grow grass), **[2]** Arbre (plant a tree),
+  **[3]** Pistolet à Eau (turn grass into water).
+- Press **SPACE** to use the selected ability on the tile you're standing on.
+- Press **R** to reset the world.
+
+Build **habitats** to attract creatures and complete **requests** (`requêtes`)
+for XP and levels (`niveaux`). Current habitats (see `src/habitats.ts`):
+
+- **Forêt ombragée** — a tree with 4 grass neighbors → attracts Chenipan.
+- **Étang paisible** — a water tile with ≥2 grass neighbors → attracts Carapuce.
+- **Clairière ensoleillée** — a grass tile with ≥3 tree neighbors → attracts Pikachu.
+
+Your progress is **saved automatically** in the browser (`localStorage`).
 
 ## Scripts
 

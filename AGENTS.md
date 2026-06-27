@@ -11,6 +11,12 @@ The core gameplay loop lives in `src/scenes/GameScene.ts`. Tile types, grid
 size, and the color palette are in `src/constants.ts`. The game is bootstrapped
 in `src/main.ts` and mounted into `#game` in `index.html`.
 
+Content is data-driven: habitats and the creatures they attract are defined in
+`src/habitats.ts` (add a habitat = add a data entry, no engine changes). Pixel
+sprites are code-defined grids in `src/sprites.ts`, rendered to textures by
+`src/pixelArt.ts`. In-game/UI text is in **French** (the player is a French
+speaker) — keep new user-facing strings in French.
+
 ## Common commands
 
 See `README.md` and the `scripts` block in `package.json`. In short:
@@ -27,6 +33,10 @@ See `README.md` and the `scripts` block in `package.json`. In short:
   `http://localhost:5173/`.
 - The production `npm run build` prints a "chunks larger than 500 kB" warning —
   this is just Phaser's bundle size, not an error, and the build still succeeds.
-- The game only responds to keyboard input (arrows/WASD to move, `1`/`2` to
-  switch move, `SPACE` to act) and the canvas must be focused/clicked first when
-  testing via a browser before key presses register.
+- The game only responds to keyboard input (arrows/WASD to move, `1`/`2`/`3` to
+  switch ability, `SPACE` to act, `R` to reset) and the canvas must be
+  focused/clicked first when testing via a browser before key presses register.
+- The game auto-saves to `localStorage` under the key `mayden-jeu:v1`. When
+  testing a clean run, press `R` in-game (or clear that key) — otherwise a
+  previous session's world reloads. Bumping the save schema means bumping that
+  key/version in `src/constants.ts`.
