@@ -4,13 +4,21 @@ export const TILE_SIZE = BASE_TILE_PX * PIXEL_SCALE; // 48
 export const GRID_COLS = 12;
 export const GRID_ROWS = 10;
 
-export const GAME_WIDTH = TILE_SIZE * GRID_COLS;
-export const GAME_HEIGHT = TILE_SIZE * GRID_ROWS;
+/** On-screen touch control bar drawn below the tile grid. */
+export const UI_BAR_HEIGHT = 64;
+
+export const GRID_PIXEL_WIDTH = TILE_SIZE * GRID_COLS;
+export const GRID_PIXEL_HEIGHT = TILE_SIZE * GRID_ROWS;
+
+export const GAME_WIDTH = GRID_PIXEL_WIDTH;
+export const GAME_HEIGHT = GRID_PIXEL_HEIGHT + UI_BAR_HEIGHT;
 
 export enum Tile {
   Wasteland = "wasteland",
   Grass = "grass",
   Tree = "tree",
+  Water = "water",
+  Flower = "flower",
 }
 
 /** Texture keys built at runtime in {@link GameScene}. */
@@ -19,15 +27,33 @@ export const TEX = {
   wastelandB: "wasteland_b",
   grassA: "grass_a",
   grassB: "grass_b",
+  waterA: "water_a",
+  waterB: "water_b",
+  flowerA: "flower_a",
+  flowerB: "flower_b",
   tree: "tree",
   player: "player",
-  creature: "creature",
 } as const;
 
 /** Base colors used to generate the terrain tile textures. */
 export const TERRAIN = {
   wasteland: { base: 0x8a7551, dark: 0x6b5a3c, light: 0x9c895f },
   grass: { base: 0x57c357, dark: 0x3f9e44, light: 0x7ee07a },
+  water: { base: 0x4aa3e0, dark: 0x2f7fc0, light: 0x8fd0f5 },
+  // A grassy meadow whose bright "light" speckles read as little flowers.
+  flower: { base: 0x57c357, dark: 0xffd23f, light: 0xff77c8 },
 } as const;
 
 export const HUD_TEXT_COLOR = "#ffffff";
+
+export const SAVE_KEY = "mayden-jeu:v1";
+
+/** XP needed per level, and XP awarded for actions. */
+export const XP_PER_LEVEL = 20;
+export const XP_PER_HABITAT = 10;
+export const XP_PER_REQUEST = 20;
+/** Reward for fulfilling a creature's idle mini-request. */
+export const XP_PER_WISH = 5;
+
+/** Length of a full day→night→day cycle, in milliseconds. */
+export const DAY_NIGHT_MS = 16000;
