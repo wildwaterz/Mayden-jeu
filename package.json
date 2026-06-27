@@ -1,0 +1,24 @@
+{
+  "name": "mayden-jeu",
+  "private": true,
+  "version": "0.1.0",
+  "type": "module",
+  "description": "A cozy Pokémon Pokopia-inspired terraforming game — play as a shapeshifter and restore a withered world to attract creatures.",
+  "scripts": {
+    "dev": "vite",
+    "build": "tsc --noEmit && vite build",
+    "preview": "vite preview",
+    "typecheck": "tsc --noEmit",
+    "lint": "eslint ."
+  },
+  "dependencies": {
+    "phaser": "^3.80.1"
+  },
+  "devDependencies": {
+    "@eslint/js": "^9.9.0",
+    "eslint": "^9.9.0",
+    "typescript": "^5.5.4",
+    "typescript-eslint": "^8.0.1",
+    "vite": "^5.4.0"
+  }
+}
