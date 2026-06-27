@@ -1,6 +1,8 @@
 import Phaser from "phaser";
 import {
   GRID_COLS,
+  GRID_PIXEL_HEIGHT,
+  GRID_PIXEL_WIDTH,
   GRID_ROWS,
   HUD_TEXT_COLOR,
   PIXEL_SCALE,
@@ -9,6 +11,7 @@ import {
   TEX,
   TILE_SIZE,
   Tile,
+  UI_BAR_HEIGHT,
   XP_PER_HABITAT,
   XP_PER_LEVEL,
   XP_PER_REQUEST,
@@ -23,6 +26,12 @@ interface PlacedCreature {
   id: string;
   r: number;
   c: number;
+}
+
+interface CreatureSprite {
+  sprite: Phaser.GameObjects.Image;
+  homeX: number;
+  homeY: number;
 }
 
 interface SaveData {
@@ -47,17 +56,25 @@ const MOVE_NAMES: Record<Move, string> = {
   water: "Pistolet à Eau (crée de l'eau)",
 };
 
+const ABILITY_BUTTONS: ReadonlyArray<{ move: Move; label: string }> = [
+  { move: "leafage", label: "Feuillage" },
+  { move: "plant", label: "Arbre" },
+  { move: "water", label: "Eau" },
+];
+
 /**
  * Core gameplay loop inspired by Pokémon Pokopia (texte en français) :
  * on terraforme un monde fané (herbe, arbres, eau) pour bâtir des habitats
  * qui attirent des créatures. Des requêtes guident le joueur et donnent de
  * l'XP pour monter de niveau. La partie est sauvegardée automatiquement.
+ * Jouable au clavier OU à la souris/tactile (tap sur une case + boutons).
  */
 export class GameScene extends Phaser.Scene {
   private tiles: Tile[][] = [];
   private tileImages: Phaser.GameObjects.Image[][] = [];
   private treeSprites = new Map<string, Phaser.GameObjects.Image>();
   private placedCreatures: PlacedCreature[] = [];
+  private creatureSprites: CreatureSprite[] = [];
   private satisfiedHabitats = new Set<string>();
 
   private player!: Phaser.GameObjects.Image;
@@ -70,9 +87,34 @@ export class GameScene extends Phaser.Scene {
 
   private hudText!: Phaser.GameObjects.Text;
   private toastText!: Phaser.GameObjects.Text;
+  private abilityButtons = new Map<Move, Phaser.GameObjects.Rectangle>();
+  private dexContainer!: Phaser.GameObjects.Container;
+  private dexOpen = false;
 
   constructor() {
     super("GameScene");
+  }
+
+  /**
+   * Phaser reuses the same Scene instance across `scene.restart()`, so class
+   * fields are NOT re-initialized automatically. Reset all mutable state here
+   * (init runs before create on every start AND restart) to avoid leftover
+   * tiles/creatures from a previous session.
+   */
+  init(): void {
+    this.tiles = [];
+    this.tileImages = [];
+    this.treeSprites = new Map();
+    this.placedCreatures = [];
+    this.creatureSprites = [];
+    this.satisfiedHabitats = new Set();
+    this.playerCol = Math.floor(GRID_COLS / 2);
+    this.playerRow = Math.floor(GRID_ROWS / 2);
+    this.selectedMove = "leafage";
+    this.xp = 0;
+    this.requestIndex = 0;
+    this.abilityButtons = new Map();
+    this.dexOpen = false;
   }
 
   create(): void {
@@ -95,31 +137,12 @@ export class GameScene extends Phaser.Scene {
       }
     }
 
-    this.hudText = this.add
-      .text(8, 8, "", {
-        fontFamily: "monospace",
-        fontSize: "12px",
-        color: HUD_TEXT_COLOR,
-        backgroundColor: "rgba(0,0,0,0.5)",
-        padding: { x: 6, y: 4 },
-      })
-      .setScrollFactor(0)
-      .setDepth(100);
-
-    this.toastText = this.add
-      .text(GRID_COLS * TILE_SIZE * 0.5, 12, "", {
-        fontFamily: "monospace",
-        fontSize: "14px",
-        color: "#fff4b0",
-        backgroundColor: "rgba(0,0,0,0.6)",
-        padding: { x: 8, y: 5 },
-        align: "center",
-      })
-      .setOrigin(0.5, 0)
-      .setDepth(100)
-      .setAlpha(0);
+    this.createControlBar();
+    this.createHud();
+    this.createDexPanel();
 
     this.registerInput();
+    this.startCreatureLife();
     this.refreshHud();
   }
 
@@ -163,7 +186,9 @@ export class GameScene extends Phaser.Scene {
         this.tiles[r][c] = tile;
         const image = this.add
           .image(c * TILE_SIZE, r * TILE_SIZE, this.textureForTile(tile, r, c))
-          .setOrigin(0, 0);
+          .setOrigin(0, 0)
+          .setInteractive({ useHandCursor: true });
+        image.on("pointerdown", () => this.tapTile(r, c));
         this.tileImages[r][c] = image;
         if (tile === Tile.Tree) {
           this.spawnTreeSprite(r, c, `${r},${c}`);
@@ -177,7 +202,7 @@ export class GameScene extends Phaser.Scene {
     if (!def) return;
     this.placedCreatures.push(placed);
     this.satisfiedHabitats.add(this.habitatKey(def, placed.r, placed.c));
-    this.spawnCreatureSprite(def, placed.r, placed.c);
+    this.spawnCreatureSprite(def, placed.r, placed.c, false);
   }
 
   private positionPlayer(): void {
@@ -185,6 +210,83 @@ export class GameScene extends Phaser.Scene {
       this.playerCol * TILE_SIZE + TILE_SIZE / 2,
       this.playerRow * TILE_SIZE + TILE_SIZE / 2,
     );
+  }
+
+  // --- UI: control bar + HUD -------------------------------------------
+
+  private createControlBar(): void {
+    const top = GRID_PIXEL_HEIGHT;
+    this.add
+      .rectangle(0, top, GRID_PIXEL_WIDTH, UI_BAR_HEIGHT, 0x1b2230)
+      .setOrigin(0, 0)
+      .setDepth(80);
+
+    const buttons = [
+      ...ABILITY_BUTTONS.map((b) => ({ label: b.label, move: b.move, action: () => this.selectMove(b.move) })),
+      { label: "Créatures", move: null, action: () => this.toggleDex() },
+      { label: "Rejouer", move: null, action: () => this.resetGame() },
+    ];
+
+    const pad = 8;
+    const gap = 6;
+    const count = buttons.length;
+    const width = (GRID_PIXEL_WIDTH - pad * 2 - gap * (count - 1)) / count;
+    const height = UI_BAR_HEIGHT - 16;
+    const y = top + 8;
+
+    buttons.forEach((btn, i) => {
+      const x = pad + i * (width + gap);
+      const rect = this.add
+        .rectangle(x, y, width, height, 0x2b3650)
+        .setOrigin(0, 0)
+        .setStrokeStyle(2, 0x44557a)
+        .setDepth(81)
+        .setInteractive({ useHandCursor: true });
+      rect.on("pointerdown", btn.action);
+      this.add
+        .text(x + width / 2, y + height / 2, btn.label, {
+          fontFamily: "monospace",
+          fontSize: "13px",
+          color: "#e8eef5",
+        })
+        .setOrigin(0.5)
+        .setDepth(82);
+      if (btn.move) this.abilityButtons.set(btn.move, rect);
+    });
+
+    this.highlightAbility();
+  }
+
+  private highlightAbility(): void {
+    for (const [move, rect] of this.abilityButtons) {
+      rect.setFillStyle(move === this.selectedMove ? 0x3f6f4a : 0x2b3650);
+    }
+  }
+
+  private createHud(): void {
+    this.hudText = this.add
+      .text(8, 8, "", {
+        fontFamily: "monospace",
+        fontSize: "12px",
+        color: HUD_TEXT_COLOR,
+        backgroundColor: "rgba(0,0,0,0.5)",
+        padding: { x: 6, y: 4 },
+      })
+      .setScrollFactor(0)
+      .setDepth(100);
+
+    this.toastText = this.add
+      .text(GRID_PIXEL_WIDTH * 0.5, 12, "", {
+        fontFamily: "monospace",
+        fontSize: "14px",
+        color: "#fff4b0",
+        backgroundColor: "rgba(0,0,0,0.6)",
+        padding: { x: 8, y: 5 },
+        align: "center",
+      })
+      .setOrigin(0.5, 0)
+      .setDepth(100)
+      .setAlpha(0);
   }
 
   // --- Input ------------------------------------------------------------
@@ -206,25 +308,37 @@ export class GameScene extends Phaser.Scene {
     kb.on("keydown-TWO", () => this.selectMove("plant"));
     kb.on("keydown-THREE", () => this.selectMove("water"));
 
-    kb.on("keydown-SPACE", () => this.useMove());
+    kb.on("keydown-SPACE", () => this.useAbilityAt(this.playerRow, this.playerCol));
+    kb.on("keydown-C", () => this.toggleDex());
     kb.on("keydown-R", () => this.resetGame());
   }
 
   private movePlayer(dr: number, dc: number): void {
+    if (this.dexOpen) return;
     this.playerRow = Phaser.Math.Clamp(this.playerRow + dr, 0, GRID_ROWS - 1);
     this.playerCol = Phaser.Math.Clamp(this.playerCol + dc, 0, GRID_COLS - 1);
     this.positionPlayer();
     this.saveGame();
   }
 
+  /** Mouse/touch: hop to the tapped tile and apply the current ability. */
+  private tapTile(r: number, c: number): void {
+    if (this.dexOpen) return;
+    this.playerRow = r;
+    this.playerCol = c;
+    this.positionPlayer();
+    this.saveGame();
+    this.useAbilityAt(r, c);
+  }
+
   private selectMove(move: Move): void {
     this.selectedMove = move;
+    this.highlightAbility();
     this.refreshHud();
   }
 
-  private useMove(): void {
-    const r = this.playerRow;
-    const c = this.playerCol;
+  private useAbilityAt(r: number, c: number): void {
+    if (this.dexOpen) return;
     const current = this.tiles[r][c];
 
     switch (this.selectedMove) {
@@ -319,7 +433,7 @@ export class GameScene extends Phaser.Scene {
 
   private onHabitatBuilt(def: HabitatDef, r: number, c: number): void {
     this.placedCreatures.push({ id: def.id, r, c });
-    this.spawnCreatureSprite(def, r, c);
+    this.spawnCreatureSprite(def, r, c, true);
 
     const request = this.currentRequest();
     if (request && request.id === def.id) {
@@ -339,28 +453,140 @@ export class GameScene extends Phaser.Scene {
     this.saveGame();
   }
 
-  private spawnCreatureSprite(def: HabitatDef, r: number, c: number): void {
-    const cx = c * TILE_SIZE + TILE_SIZE / 2;
-    const cy = r * TILE_SIZE + TILE_SIZE / 2 - TILE_SIZE * 0.55;
-    const creature = this.add
-      .image(cx, cy - 14, creatureTextureKey(def.id))
-      .setDepth(40)
-      .setAlpha(0);
+  private spawnCreatureSprite(def: HabitatDef, r: number, c: number, animateIn: boolean): void {
+    const homeX = c * TILE_SIZE + TILE_SIZE / 2;
+    const homeY = r * TILE_SIZE + TILE_SIZE / 2 - TILE_SIZE * 0.55;
+    const creature = this.add.image(homeX, homeY, creatureTextureKey(def.id)).setDepth(40);
 
-    this.tweens.add({ targets: creature, y: cy, alpha: 1, duration: 450, ease: "Back.Out" });
-    this.tweens.add({
-      targets: creature,
-      y: cy - 6,
-      duration: 900,
-      delay: 450,
-      yoyo: true,
-      repeat: -1,
-      ease: "Sine.InOut",
+    if (animateIn) {
+      creature.setAlpha(0).setY(homeY - 14);
+      this.tweens.add({ targets: creature, y: homeY, alpha: 1, duration: 450, ease: "Back.Out" });
+    }
+
+    this.creatureSprites.push({ sprite: creature, homeX, homeY });
+  }
+
+  /** Periodic idle wandering + occasional happy hop for every creature. */
+  private startCreatureLife(): void {
+    const dx = Math.round(TILE_SIZE * 0.7);
+    const dy = Math.round(TILE_SIZE * 0.4);
+    this.time.addEvent({
+      delay: 1200,
+      loop: true,
+      callback: () => {
+        for (const { sprite, homeX, homeY } of this.creatureSprites) {
+          const tx = Phaser.Math.Clamp(
+            homeX + Phaser.Math.Between(-dx, dx),
+            TILE_SIZE * 0.3,
+            GRID_PIXEL_WIDTH - TILE_SIZE * 0.3,
+          );
+          const ty = Phaser.Math.Clamp(
+            homeY + Phaser.Math.Between(-dy, dy),
+            TILE_SIZE * 0.2,
+            GRID_PIXEL_HEIGHT - TILE_SIZE * 0.3,
+          );
+          sprite.setFlipX(tx < sprite.x);
+          this.tweens.add({ targets: sprite, x: tx, y: ty, duration: 650, ease: "Sine.InOut" });
+
+          if (Phaser.Math.Between(0, 2) === 0) {
+            // Happy hop in place.
+            this.tweens.add({
+              targets: sprite,
+              scaleX: 1.18,
+              scaleY: 1.18,
+              duration: 140,
+              yoyo: true,
+              ease: "Quad.Out",
+            });
+          }
+        }
+      },
     });
   }
 
   private habitatKey(def: HabitatDef, r: number, c: number): string {
     return `${def.id}:${r},${c}`;
+  }
+
+  // --- Dex panel --------------------------------------------------------
+
+  private createDexPanel(): void {
+    const bg = this.add
+      .rectangle(0, 0, GRID_PIXEL_WIDTH, GRID_PIXEL_HEIGHT + UI_BAR_HEIGHT, 0x000000, 0.55)
+      .setOrigin(0, 0)
+      .setInteractive();
+    bg.on("pointerdown", () => this.toggleDex());
+
+    const panel = this.add
+      .rectangle(GRID_PIXEL_WIDTH / 2, GRID_PIXEL_HEIGHT / 2, GRID_PIXEL_WIDTH - 80, GRID_PIXEL_HEIGHT - 80, 0x222b3d)
+      .setStrokeStyle(3, 0x44557a);
+
+    const title = this.add
+      .text(GRID_PIXEL_WIDTH / 2, GRID_PIXEL_HEIGHT / 2 - (GRID_PIXEL_HEIGHT - 80) / 2 + 16, "Créatures attirées", {
+        fontFamily: "monospace",
+        fontSize: "18px",
+        color: "#ffffff",
+      })
+      .setOrigin(0.5, 0);
+
+    this.dexContainer = this.add.container(0, 0, [bg, panel, title]).setDepth(200).setVisible(false);
+  }
+
+  private toggleDex(): void {
+    this.dexOpen = !this.dexOpen;
+    if (this.dexOpen) this.rebuildDexList();
+    this.dexContainer.setVisible(this.dexOpen);
+  }
+
+  private rebuildDexList(): void {
+    // Drop everything except the bg/panel/title (the first three children).
+    const keep = this.dexContainer.list.slice(0, 3);
+    for (const child of this.dexContainer.list.slice(3)) child.destroy();
+    this.dexContainer.removeAll();
+    keep.forEach((child) => this.dexContainer.add(child));
+
+    const counts = new Map<string, number>();
+    for (const placed of this.placedCreatures) {
+      counts.set(placed.id, (counts.get(placed.id) ?? 0) + 1);
+    }
+
+    const left = GRID_PIXEL_WIDTH / 2 - (GRID_PIXEL_WIDTH - 80) / 2 + 28;
+    let y = GRID_PIXEL_HEIGHT / 2 - (GRID_PIXEL_HEIGHT - 80) / 2 + 58;
+
+    const discovered = HABITATS.filter((h) => (counts.get(h.id) ?? 0) > 0);
+    if (discovered.length === 0) {
+      const empty = this.add
+        .text(GRID_PIXEL_WIDTH / 2, GRID_PIXEL_HEIGHT / 2, "Aucune créature pour l'instant.\nBâtis un habitat !", {
+          fontFamily: "monospace",
+          fontSize: "14px",
+          color: "#c8d2e0",
+          align: "center",
+        })
+        .setOrigin(0.5);
+      this.dexContainer.add(empty);
+    } else {
+      for (const def of discovered) {
+        const icon = this.add.image(left, y, creatureTextureKey(def.id)).setOrigin(0.5, 0).setScale(0.8);
+        const label = this.add
+          .text(left + 36, y + 4, `${def.creatureName}  x${counts.get(def.id)}\n${def.name}`, {
+            fontFamily: "monospace",
+            fontSize: "13px",
+            color: "#e8eef5",
+          })
+          .setOrigin(0, 0);
+        this.dexContainer.add([icon, label]);
+        y += 54;
+      }
+    }
+
+    const hint = this.add
+      .text(GRID_PIXEL_WIDTH / 2, GRID_PIXEL_HEIGHT / 2 + (GRID_PIXEL_HEIGHT - 80) / 2 - 16, "Touche « C » ou clique pour fermer", {
+        fontFamily: "monospace",
+        fontSize: "11px",
+        color: "#9fb0c8",
+      })
+      .setOrigin(0.5, 1);
+    this.dexContainer.add(hint);
   }
 
   // --- Progression ------------------------------------------------------
@@ -437,7 +663,7 @@ export class GameScene extends Phaser.Scene {
 
     this.hudText.setText(
       [
-        "Déplacer : flèches / WASD    Agir : ESPACE    Recommencer : R",
+        "Clique une case ou flèches/WASD + ESPACE",
         "Capacités : [1] Feuillage  [2] Arbre  [3] Pistolet à Eau",
         `Capacité choisie : ${MOVE_NAMES[this.selectedMove]}`,
         `Niveau ${this.level()}   XP ${xpIntoLevel}/${XP_PER_LEVEL}   Créatures : ${this.placedCreatures.length}`,

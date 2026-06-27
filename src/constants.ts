@@ -4,8 +4,14 @@ export const TILE_SIZE = BASE_TILE_PX * PIXEL_SCALE; // 48
 export const GRID_COLS = 12;
 export const GRID_ROWS = 10;
 
-export const GAME_WIDTH = TILE_SIZE * GRID_COLS;
-export const GAME_HEIGHT = TILE_SIZE * GRID_ROWS;
+/** On-screen touch control bar drawn below the tile grid. */
+export const UI_BAR_HEIGHT = 64;
+
+export const GRID_PIXEL_WIDTH = TILE_SIZE * GRID_COLS;
+export const GRID_PIXEL_HEIGHT = TILE_SIZE * GRID_ROWS;
+
+export const GAME_WIDTH = GRID_PIXEL_WIDTH;
+export const GAME_HEIGHT = GRID_PIXEL_HEIGHT + UI_BAR_HEIGHT;
 
 export enum Tile {
   Wasteland = "wasteland",

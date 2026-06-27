@@ -28,11 +28,20 @@ Then open the URL Vite prints (default http://localhost:5173).
 
 In-game text is in **French** (`français`). Controls:
 
-- Move the shapeshifter with the **arrow keys** or **WASD**.
-- Switch ability: **[1]** Feuillage (grow grass), **[2]** Arbre (plant a tree),
-  **[3]** Pistolet à Eau (turn grass into water).
-- Press **SPACE** to use the selected ability on the tile you're standing on.
-- Press **R** to reset the world.
+Two control schemes (great for desktop *and* tablet):
+
+- **Keyboard**: move with **arrow keys** / **WASD**, switch ability with
+  **[1]/[2]/[3]**, act with **SPACE**, toggle the creature panel with **C**,
+  reset with **R**.
+- **Mouse / touch**: **tap a tile** to hop there and apply the selected ability,
+  and use the **on-screen bottom bar** (Feuillage, Arbre, Eau, Créatures,
+  Rejouer).
+
+Abilities: **Feuillage** (grow grass), **Arbre** (plant a tree),
+**Pistolet à Eau** (turn grass into water).
+
+Attracted creatures wander and live in your world, and the **Créatures** panel
+shows everyone you've collected so far.
 
 Build **habitats** to attract creatures and complete **requests** (`requêtes`)
 for XP and levels (`niveaux`). Current habitats (see `src/habitats.ts`):
