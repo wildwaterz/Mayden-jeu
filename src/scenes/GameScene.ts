@@ -20,7 +20,13 @@ import {
 } from "../constants";
 import { drawSpriteTexture, drawTerrainTile } from "../pixelArt";
 import { CREATURE_ART, CREATURE_SPRITES, PALETTE, PLAYER_ART, TREE_ART } from "../sprites";
-import { creatureTextureKey, HABITATS, type HabitatDef } from "../habitats";
+import {
+  creatureTextureKey,
+  describeHabitat,
+  HABITATS,
+  TILE_WISH_FR,
+  type HabitatDef,
+} from "../habitats";
 import { playAttract, playRequestComplete, unlockAudio } from "../audio";
 
 type Move = "leafage" | "plant" | "water" | "fleurs";
@@ -108,6 +114,7 @@ export class GameScene extends Phaser.Scene {
 
   private hudText!: Phaser.GameObjects.Text;
   private toastText!: Phaser.GameObjects.Text;
+  private taskText!: Phaser.GameObjects.Text;
   private abilityButtons = new Map<Move, Phaser.GameObjects.Rectangle>();
   private dexContainer!: Phaser.GameObjects.Container;
   private dexOpen = false;
@@ -166,6 +173,7 @@ export class GameScene extends Phaser.Scene {
     this.registerInput();
     this.startCreatureLife();
     this.refreshHud();
+    this.refreshTasks();
   }
 
   update(): void {
@@ -338,6 +346,32 @@ export class GameScene extends Phaser.Scene {
       .setOrigin(0.5, 0)
       .setDepth(100)
       .setAlpha(0);
+
+    // Top-right list of quests creatures are currently asking for.
+    this.taskText = this.add
+      .text(GRID_PIXEL_WIDTH - 8, 8, "", {
+        fontFamily: "monospace",
+        fontSize: "11px",
+        color: "#e8eef5",
+        backgroundColor: "rgba(0,0,0,0.5)",
+        padding: { x: 6, y: 4 },
+        align: "right",
+      })
+      .setOrigin(1, 0)
+      .setDepth(100);
+  }
+
+  private refreshTasks(): void {
+    const lines: string[] = [];
+    for (const cs of this.creatureSprites) {
+      if (cs.request === null) continue;
+      lines.push(`• ${cs.def.creatureName} veut ${TILE_WISH_FR[cs.request]} tout près`);
+    }
+    if (lines.length === 0) {
+      this.taskText.setText("Tâches des créatures :\n(aucune pour l'instant)");
+    } else {
+      this.taskText.setText(["Tâches des créatures :", ...lines].join("\n"));
+    }
   }
 
   // --- Input ------------------------------------------------------------
@@ -653,6 +687,7 @@ export class GameScene extends Phaser.Scene {
       ease: "Sine.InOut",
     });
     this.showWishBubble(cs.sprite, cs.def.requestText);
+    this.refreshTasks();
   }
 
   /** A tile changed at (r,c); fulfill any creature request it satisfies. */
@@ -685,6 +720,7 @@ export class GameScene extends Phaser.Scene {
       ease: "Quad.Out",
     });
     this.refreshHud();
+    this.refreshTasks();
     this.saveGame();
   }
 
@@ -840,20 +876,22 @@ export class GameScene extends Phaser.Scene {
 
   private refreshHud(): void {
     const request = this.currentRequest();
-    const requestLine = request
-      ? `Requête : crée ${request.name} pour attirer ${request.creatureName}`
-      : "Toutes les requêtes sont accomplies ! Bravo !";
     const xpIntoLevel = this.xp % XP_PER_LEVEL;
 
-    this.hudText.setText(
-      [
-        "Clique une case ou flèches/WASD + ESPACE",
-        "Capacités : [1] Feuillage [2] Arbre [3] Eau [4] Fleurs",
-        `Capacité choisie : ${MOVE_NAMES[this.selectedMove]}`,
-        `Niveau ${this.level()}   XP ${xpIntoLevel}/${XP_PER_LEVEL}   Créatures : ${this.placedCreatures.length}`,
-        requestLine,
-      ].join("\n"),
-    );
+    const lines = [
+      "Clique une case ou flèches/WASD + ESPACE",
+      "Capacités : [1] Feuillage [2] Arbre [3] Eau [4] Fleurs",
+      `Capacité choisie : ${MOVE_NAMES[this.selectedMove]}`,
+      `Niveau ${this.level()}   XP ${xpIntoLevel}/${XP_PER_LEVEL}   Créatures : ${this.placedCreatures.length}`,
+    ];
+    if (request) {
+      lines.push(`Requête : ${request.name} → attire ${request.creatureName}`);
+      lines.push(`  Comment : ${describeHabitat(request)}`);
+    } else {
+      lines.push("Toutes les requêtes sont accomplies ! Bravo !");
+    }
+
+    this.hudText.setText(lines.join("\n"));
   }
 
   private showToast(message: string): void {

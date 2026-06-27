@@ -86,3 +86,36 @@ export const HABITATS: ReadonlyArray<HabitatDef> = [
 export function creatureTextureKey(id: string): string {
   return `creature_${id}`;
 }
+
+const TILE_CENTER_FR: Record<Tile, string> = {
+  [Tile.Wasteland]: "de la terre aride",
+  [Tile.Grass]: "de l'herbe",
+  [Tile.Tree]: "un arbre",
+  [Tile.Water]: "de l'eau",
+  [Tile.Flower]: "une fleur",
+};
+
+const TILE_PLURAL_FR: Record<Tile, string> = {
+  [Tile.Wasteland]: "cases de terre",
+  [Tile.Grass]: "cases d'herbe",
+  [Tile.Tree]: "arbres",
+  [Tile.Water]: "cases d'eau",
+  [Tile.Flower]: "fleurs",
+};
+
+/** Short French phrase for what a creature wants placed next to it. */
+export const TILE_WISH_FR: Record<Tile, string> = {
+  [Tile.Wasteland]: "de la terre",
+  [Tile.Grass]: "de l'herbe",
+  [Tile.Tree]: "un arbre",
+  [Tile.Water]: "de l'eau",
+  [Tile.Flower]: "des fleurs",
+};
+
+/** Human-readable French build recipe, generated from the habitat data. */
+export function describeHabitat(def: HabitatDef): string {
+  const reqs = def.required
+    .map((r) => `${r.count} ${TILE_PLURAL_FR[r.tile]}`)
+    .join(" et ");
+  return `place ${TILE_CENTER_FR[def.center]} avec au moins ${reqs} autour`;
+}
