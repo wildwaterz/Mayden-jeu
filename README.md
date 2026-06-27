@@ -38,10 +38,11 @@ Two control schemes (great for desktop *and* tablet):
   Rejouer).
 
 Abilities: **Feuillage** (grow grass), **Arbre** (plant a tree),
-**Pistolet à Eau** (turn grass into water).
+**Pistolet à Eau** (turn grass into water), **Fleurs** (grow flowers on grass).
 
-Attracted creatures wander and live in your world, and the **Créatures** panel
-shows everyone you've collected so far.
+Attracted creatures wander and live in your world, occasionally show a little
+**wish bubble**, and play a sound when attracted. The **Créatures** panel shows
+everyone you've collected so far.
 
 Build **habitats** to attract creatures and complete **requests** (`requêtes`)
 for XP and levels (`niveaux`). Current habitats (see `src/habitats.ts`):
@@ -49,6 +50,7 @@ for XP and levels (`niveaux`). Current habitats (see `src/habitats.ts`):
 - **Forêt ombragée** — a tree with 4 grass neighbors → attracts Chenipan.
 - **Étang paisible** — a water tile with ≥2 grass neighbors → attracts Carapuce.
 - **Clairière ensoleillée** — a grass tile with ≥3 tree neighbors → attracts Pikachu.
+- **Prairie fleurie** — a flower tile with ≥2 flower neighbors → attracts Papilusion.
 
 Your progress is **saved automatically** in the browser (`localStorage`).
 

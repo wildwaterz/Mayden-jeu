@@ -18,6 +18,8 @@ export interface HabitatDef {
   center: Tile;
   /** Required counts among the 4 orthogonal neighbors (matched with ">="). */
   required: ReadonlyArray<{ tile: Tile; count: number }>;
+  /** Short French lines the creature occasionally says while idling. */
+  wishes: ReadonlyArray<string>;
 }
 
 export const HABITATS: ReadonlyArray<HabitatDef> = [
@@ -29,6 +31,7 @@ export const HABITATS: ReadonlyArray<HabitatDef> = [
     creatureDark: 0x5f9433,
     center: Tile.Tree,
     required: [{ tile: Tile.Grass, count: 4 }],
+    wishes: ["J'adore les arbres !", "Encore plus d'herbe, s'il te plaît !"],
   },
   {
     id: "etang",
@@ -38,6 +41,7 @@ export const HABITATS: ReadonlyArray<HabitatDef> = [
     creatureDark: 0x3a78c0,
     center: Tile.Water,
     required: [{ tile: Tile.Grass, count: 2 }],
+    wishes: ["L'eau est si fraîche !", "Je veux un plus grand étang !"],
   },
   {
     id: "clairiere",
@@ -47,6 +51,17 @@ export const HABITATS: ReadonlyArray<HabitatDef> = [
     creatureDark: 0xc99a1e,
     center: Tile.Grass,
     required: [{ tile: Tile.Tree, count: 3 }],
+    wishes: ["Quelle belle clairière !", "J'aime le soleil !"],
+  },
+  {
+    id: "prairie",
+    name: "Prairie fleurie",
+    creatureName: "Papilusion",
+    creatureBase: 0xb583e0,
+    creatureDark: 0x7d4fb0,
+    center: Tile.Flower,
+    required: [{ tile: Tile.Flower, count: 2 }],
+    wishes: ["Je veux des fleurs !", "Vive les fleurs colorées !"],
   },
 ];
 

@@ -18,6 +18,7 @@ export enum Tile {
   Grass = "grass",
   Tree = "tree",
   Water = "water",
+  Flower = "flower",
 }
 
 /** Texture keys built at runtime in {@link GameScene}. */
@@ -28,6 +29,8 @@ export const TEX = {
   grassB: "grass_b",
   waterA: "water_a",
   waterB: "water_b",
+  flowerA: "flower_a",
+  flowerB: "flower_b",
   tree: "tree",
   player: "player",
 } as const;
@@ -37,6 +40,8 @@ export const TERRAIN = {
   wasteland: { base: 0x8a7551, dark: 0x6b5a3c, light: 0x9c895f },
   grass: { base: 0x57c357, dark: 0x3f9e44, light: 0x7ee07a },
   water: { base: 0x4aa3e0, dark: 0x2f7fc0, light: 0x8fd0f5 },
+  // A grassy meadow whose bright "light" speckles read as little flowers.
+  flower: { base: 0x57c357, dark: 0xffd23f, light: 0xff77c8 },
 } as const;
 
 export const HUD_TEXT_COLOR = "#ffffff";

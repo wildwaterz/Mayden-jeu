@@ -19,8 +19,9 @@ import {
 import { drawSpriteTexture, drawTerrainTile } from "../pixelArt";
 import { CREATURE_ART, PALETTE, PLAYER_ART, TREE_ART } from "../sprites";
 import { creatureTextureKey, HABITATS, type HabitatDef } from "../habitats";
+import { playAttract, playRequestComplete, unlockAudio } from "../audio";
 
-type Move = "leafage" | "plant" | "water";
+type Move = "leafage" | "plant" | "water" | "fleurs";
 
 interface PlacedCreature {
   id: string;
@@ -30,6 +31,7 @@ interface PlacedCreature {
 
 interface CreatureSprite {
   sprite: Phaser.GameObjects.Image;
+  def: HabitatDef;
   homeX: number;
   homeY: number;
 }
@@ -54,12 +56,14 @@ const MOVE_NAMES: Record<Move, string> = {
   leafage: "Feuillage (fait pousser l'herbe)",
   plant: "Planter un arbre",
   water: "Pistolet à Eau (crée de l'eau)",
+  fleurs: "Fleurs (fait pousser des fleurs)",
 };
 
 const ABILITY_BUTTONS: ReadonlyArray<{ move: Move; label: string }> = [
   { move: "leafage", label: "Feuillage" },
   { move: "plant", label: "Arbre" },
   { move: "water", label: "Eau" },
+  { move: "fleurs", label: "Fleurs" },
 ];
 
 /**
@@ -155,6 +159,8 @@ export class GameScene extends Phaser.Scene {
     drawTerrainTile(this, TEX.grassB, TERRAIN.grass.base, TERRAIN.grass.dark, TERRAIN.grass.light, PIXEL_SCALE, 99);
     drawTerrainTile(this, TEX.waterA, TERRAIN.water.base, TERRAIN.water.dark, TERRAIN.water.light, PIXEL_SCALE, 21);
     drawTerrainTile(this, TEX.waterB, TERRAIN.water.base, TERRAIN.water.dark, TERRAIN.water.light, PIXEL_SCALE, 55);
+    drawTerrainTile(this, TEX.flowerA, TERRAIN.flower.base, TERRAIN.flower.dark, TERRAIN.flower.light, PIXEL_SCALE, 314);
+    drawTerrainTile(this, TEX.flowerB, TERRAIN.flower.base, TERRAIN.flower.dark, TERRAIN.flower.light, PIXEL_SCALE, 271);
     drawSpriteTexture(this, TEX.tree, TREE_ART, PALETTE, PIXEL_SCALE);
     drawSpriteTexture(this, TEX.player, PLAYER_ART, PALETTE, PIXEL_SCALE);
 
@@ -246,7 +252,7 @@ export class GameScene extends Phaser.Scene {
       this.add
         .text(x + width / 2, y + height / 2, btn.label, {
           fontFamily: "monospace",
-          fontSize: "13px",
+          fontSize: "12px",
           color: "#e8eef5",
         })
         .setOrigin(0.5)
@@ -307,10 +313,14 @@ export class GameScene extends Phaser.Scene {
     kb.on("keydown-ONE", () => this.selectMove("leafage"));
     kb.on("keydown-TWO", () => this.selectMove("plant"));
     kb.on("keydown-THREE", () => this.selectMove("water"));
+    kb.on("keydown-FOUR", () => this.selectMove("fleurs"));
 
     kb.on("keydown-SPACE", () => this.useAbilityAt(this.playerRow, this.playerCol));
     kb.on("keydown-C", () => this.toggleDex());
     kb.on("keydown-R", () => this.resetGame());
+
+    // Any key press is a user gesture; use it to unlock audio.
+    kb.on("keydown", () => unlockAudio());
   }
 
   private movePlayer(dr: number, dc: number): void {
@@ -323,6 +333,7 @@ export class GameScene extends Phaser.Scene {
 
   /** Mouse/touch: hop to the tapped tile and apply the current ability. */
   private tapTile(r: number, c: number): void {
+    unlockAudio();
     if (this.dexOpen) return;
     this.playerRow = r;
     this.playerCol = c;
@@ -365,6 +376,15 @@ export class GameScene extends Phaser.Scene {
           this.showToast("Il y a déjà de l'eau ici.");
         } else {
           this.showToast("Le Pistolet à Eau ne marche que sur l'herbe.");
+        }
+        break;
+      case "fleurs":
+        if (current === Tile.Grass) {
+          this.applyTile(r, c, Tile.Flower);
+        } else if (current === Tile.Flower) {
+          this.showToast("Des fleurs poussent déjà ici.");
+        } else {
+          this.showToast("Fais pousser de l'herbe avant de semer des fleurs.");
         }
         break;
     }
@@ -439,11 +459,13 @@ export class GameScene extends Phaser.Scene {
     if (request && request.id === def.id) {
       this.requestIndex += 1;
       this.addXp(XP_PER_HABITAT + XP_PER_REQUEST);
+      playRequestComplete();
       this.showToast(
         `Requête accomplie ! ${def.creatureName} est attiré !\n+${XP_PER_HABITAT + XP_PER_REQUEST} XP`,
       );
     } else {
       this.addXp(XP_PER_HABITAT);
+      playAttract();
       this.showToast(
         `Habitat « ${def.name} » créé !\n${def.creatureName} est attiré ! +${XP_PER_HABITAT} XP`,
       );
@@ -463,7 +485,7 @@ export class GameScene extends Phaser.Scene {
       this.tweens.add({ targets: creature, y: homeY, alpha: 1, duration: 450, ease: "Back.Out" });
     }
 
-    this.creatureSprites.push({ sprite: creature, homeX, homeY });
+    this.creatureSprites.push({ sprite: creature, def, homeX, homeY });
   }
 
   /** Periodic idle wandering + occasional happy hop for every creature. */
@@ -474,7 +496,8 @@ export class GameScene extends Phaser.Scene {
       delay: 1200,
       loop: true,
       callback: () => {
-        for (const { sprite, homeX, homeY } of this.creatureSprites) {
+        for (const cs of this.creatureSprites) {
+          const { sprite, def, homeX, homeY } = cs;
           const tx = Phaser.Math.Clamp(
             homeX + Phaser.Math.Between(-dx, dx),
             TILE_SIZE * 0.3,
@@ -499,9 +522,38 @@ export class GameScene extends Phaser.Scene {
               ease: "Quad.Out",
             });
           }
+
+          if (Phaser.Math.Between(0, 4) === 0 && def.wishes.length > 0) {
+            const wish = def.wishes[Phaser.Math.Between(0, def.wishes.length - 1)];
+            this.showWishBubble(sprite, wish);
+          }
         }
       },
     });
+  }
+
+  /** A small French speech bubble above a creature expressing a wish. */
+  private showWishBubble(sprite: Phaser.GameObjects.Image, text: string): void {
+    const label = this.add
+      .text(sprite.x, sprite.y - TILE_SIZE * 0.55, text, {
+        fontFamily: "monospace",
+        fontSize: "11px",
+        color: "#2a2030",
+        backgroundColor: "#fff4d6",
+        padding: { x: 5, y: 3 },
+        align: "center",
+      })
+      .setOrigin(0.5, 1)
+      .setDepth(60);
+
+    this.tweens.add({
+      targets: label,
+      y: label.y - 8,
+      duration: 1800,
+      ease: "Sine.Out",
+      onComplete: () => label.destroy(),
+    });
+    this.tweens.add({ targets: label, alpha: 0, delay: 1200, duration: 600 });
   }
 
   private habitatKey(def: HabitatDef, r: number, c: number): string {
@@ -664,7 +716,7 @@ export class GameScene extends Phaser.Scene {
     this.hudText.setText(
       [
         "Clique une case ou flèches/WASD + ESPACE",
-        "Capacités : [1] Feuillage  [2] Arbre  [3] Pistolet à Eau",
+        "Capacités : [1] Feuillage [2] Arbre [3] Eau [4] Fleurs",
         `Capacité choisie : ${MOVE_NAMES[this.selectedMove]}`,
         `Niveau ${this.level()}   XP ${xpIntoLevel}/${XP_PER_LEVEL}   Créatures : ${this.placedCreatures.length}`,
         requestLine,
@@ -692,6 +744,8 @@ export class GameScene extends Phaser.Scene {
         return alt ? TEX.wastelandA : TEX.wastelandB;
       case Tile.Water:
         return alt ? TEX.waterA : TEX.waterB;
+      case Tile.Flower:
+        return alt ? TEX.flowerA : TEX.flowerB;
       case Tile.Grass:
       case Tile.Tree:
         return alt ? TEX.grassA : TEX.grassB;
