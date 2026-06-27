@@ -187,7 +187,7 @@ export class GameScene extends Phaser.Scene {
     // Tween the standard GameObject alpha (reliable) between day and night.
     this.tweens.add({
       targets: overlay,
-      alpha: 0.55,
+      alpha: 0.6,
       duration: DAY_NIGHT_MS / 2,
       yoyo: true,
       repeat: -1,
