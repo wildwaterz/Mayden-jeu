@@ -180,18 +180,18 @@ export class GameScene extends Phaser.Scene {
   /** A looping ambient tint that cycles the world from day to night. */
   private createDayNight(): void {
     const overlay = this.add
-      .rectangle(0, 0, GRID_PIXEL_WIDTH, GRID_PIXEL_HEIGHT, 0x0a1233, 0)
+      .rectangle(0, 0, GRID_PIXEL_WIDTH, GRID_PIXEL_HEIGHT, 0x0a1233)
       .setOrigin(0, 0)
-      .setDepth(65);
-    const phase = { a: 0 };
+      .setDepth(65)
+      .setAlpha(0);
+    // Tween the standard GameObject alpha (reliable) between day and night.
     this.tweens.add({
-      targets: phase,
-      a: 0.5,
+      targets: overlay,
+      alpha: 0.5,
       duration: DAY_NIGHT_MS / 2,
       yoyo: true,
       repeat: -1,
       ease: "Sine.InOut",
-      onUpdate: () => overlay.setFillStyle(0x0a1233, phase.a),
     });
   }
 
