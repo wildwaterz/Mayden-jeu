@@ -59,6 +59,8 @@ export const PLAYER_ART: readonly string[] = [
   "................",
 ];
 
+// Fallback creature (recolored per habitat) used if a habitat has no bespoke
+// sprite in CREATURE_SPRITES below.
 export const CREATURE_ART: readonly string[] = [
   ".......QQ.......",
   "......QqqQ......",
@@ -77,3 +79,108 @@ export const CREATURE_ART: readonly string[] = [
   "................",
   "................",
 ];
+
+/**
+ * Bespoke, original pixel-art creatures keyed by habitat id. Each has a
+ * distinct silhouette (antennae / shell / ears / wings) and its own palette.
+ * Chars not present in a creature's palette render transparent.
+ * Shared chars: `.`=transparent, `e`=eye, `w`=eye shine.
+ */
+export interface CreatureSpec {
+  art: readonly string[];
+  palette: Palette;
+}
+
+const EYE = 0x1c2226;
+const SHINE = 0xffffff;
+
+export const CREATURE_SPRITES: Record<string, CreatureSpec> = {
+  // Forest grub: green body with two pink-tipped antennae.
+  foret: {
+    palette: { ".": null, o: 0x2e6b34, b: 0x74c95a, h: 0x52a83f, l: 0xa6e88a, e: EYE, w: SHINE, a: 0x2e6b34, t: 0xff9ad5 },
+    art: [
+      "......t..t......",
+      "......a..a......",
+      ".....oa..ao.....",
+      ".....oooooo.....",
+      "....obbbbbbo....",
+      "...obbllllbbo...",
+      "..obbllllllbbo..",
+      "..obwebbbbewbo..",
+      "..obeebbbbeebo..",
+      "..obbbbbbbbbbo..",
+      "..obhbbbbbbhbo..",
+      "...obbhhhhbbo...",
+      "....obbbbbbo....",
+      ".....oooooo.....",
+      "................",
+      "................",
+    ],
+  },
+  // Water critter: blue body wearing a domed shell.
+  etang: {
+    palette: { ".": null, o: 0x205f8a, b: 0x6fb6e8, h: 0x4a8fc4, s: 0x356e9a, l: 0xa9dcff, e: EYE, w: SHINE },
+    art: [
+      "................",
+      ".....oooooo.....",
+      "...oosssssssoo..",
+      "..osshsssshsso..",
+      "..osssssssssso..",
+      "..obbbbbbbbbbo..",
+      ".obbwebbbbewbbo.",
+      ".obbeebbbbeebbo.",
+      ".obbbbbbbbbbbbo.",
+      ".obbbbhhhhbbbbo.",
+      "..obbbbbbbbbbo..",
+      "..oobbbbbbbboo..",
+      "...oo....oo.....",
+      "................",
+      "................",
+      "................",
+    ],
+  },
+  // Spark critter: round yellow body with two pointy ears.
+  clairiere: {
+    palette: { ".": null, o: 0xb5891e, b: 0xf5d24a, h: 0xd8af30, l: 0xffe98a, e: EYE, w: SHINE, a: 0xc46b2f, k: 0x3a3320 },
+    art: [
+      "...k........k...",
+      "...ko......ok...",
+      "...kbo....obk...",
+      "...obo....obo...",
+      "....oooooooo....",
+      "...obbbbbbbbo...",
+      "..obblbbbblbbo..",
+      "..obwebbbbewbo..",
+      "..obeebbbbeebo..",
+      "..obbbbaabbbbo..",
+      "..obbhbbbbhbbo..",
+      "...obbbbbbbbo...",
+      "....oooooooo....",
+      "................",
+      "................",
+      "................",
+    ],
+  },
+  // Flutter: purple body with two side wings and antennae.
+  prairie: {
+    palette: { ".": null, o: 0x5a3a86, b: 0xb583e0, h: 0x8a5fc0, l: 0xd9b6f5, e: EYE, w: SHINE, a: 0xd9a0f0 },
+    art: [
+      "......o..o......",
+      ".....o....o.....",
+      "......oooo......",
+      "....oobbbboo....",
+      "...obbbbbbbbo...",
+      "..obbbbbbbbbbo..",
+      "aaobbwebbewbboaa",
+      "aaobbeebbeebboaa",
+      "aaobbbbbbbbbboaa",
+      "aaobbbhhhhbbboaa",
+      "..obbbbbbbbbbo..",
+      "...obbbbbbbbo...",
+      "....oobbbboo....",
+      "................",
+      "................",
+      "................",
+    ],
+  },
+};

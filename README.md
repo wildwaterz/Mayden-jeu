@@ -56,6 +56,23 @@ for XP and levels (`niveaux`). Current habitats (see `src/habitats.ts`):
 
 Your progress is **saved automatically** in the browser (`localStorage`).
 
+## Play it online (deploy)
+
+The game is a static site, so it can be hosted for free. A GitHub Actions
+workflow (`.github/workflows/deploy.yml`) builds and publishes it to
+**GitHub Pages** on every push to `main`.
+
+One-time setup: in the GitHub repo, go to **Settings → Pages** and set
+**Build and deployment → Source** to **GitHub Actions**. After the next push to
+`main`, the game will be live at:
+
+```
+https://wildwaterz.github.io/Mayden-jeu/
+```
+
+(Vite is configured with `base: "/Mayden-jeu/"` for production so assets resolve
+on that URL. Local `npm run dev` still serves from `/`.)
+
 ## Scripts
 
 | Command           | What it does                          |
