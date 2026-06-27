@@ -56,4 +56,4 @@ export const XP_PER_REQUEST = 20;
 export const XP_PER_WISH = 5;
 
 /** Length of a full day→night→day cycle, in milliseconds. */
-export const DAY_NIGHT_MS = 36000;
+export const DAY_NIGHT_MS = 24000;
