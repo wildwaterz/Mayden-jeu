@@ -40,9 +40,11 @@ Two control schemes (great for desktop *and* tablet):
 Abilities: **Feuillage** (grow grass), **Arbre** (plant a tree),
 **Pistolet à Eau** (turn grass into water), **Fleurs** (grow flowers on grass).
 
-Attracted creatures wander and live in your world, occasionally show a little
-**wish bubble**, and play a sound when attracted. The **Créatures** panel shows
-everyone you've collected so far.
+Attracted creatures wander and live in your world and play a sound when
+attracted. They occasionally show a **wish bubble**; sometimes a creature makes
+a **mini-request** (a "!" appears) asking you to place a specific tile next to
+it — fulfill it for bonus XP. A gentle **day/night cycle** tints the world over
+time. The **Créatures** panel shows everyone you've collected so far.
 
 Build **habitats** to attract creatures and complete **requests** (`requêtes`)
 for XP and levels (`niveaux`). Current habitats (see `src/habitats.ts`):

@@ -20,6 +20,12 @@ export interface HabitatDef {
   required: ReadonlyArray<{ tile: Tile; count: number }>;
   /** Short French lines the creature occasionally says while idling. */
   wishes: ReadonlyArray<string>;
+  /** A fulfillable mini-request: place this tile near the creature. */
+  requestTile: Tile;
+  /** French prompt shown when the creature makes its request. */
+  requestText: string;
+  /** French thank-you shown when the request is fulfilled. */
+  thanksText: string;
 }
 
 export const HABITATS: ReadonlyArray<HabitatDef> = [
@@ -32,6 +38,9 @@ export const HABITATS: ReadonlyArray<HabitatDef> = [
     center: Tile.Tree,
     required: [{ tile: Tile.Grass, count: 4 }],
     wishes: ["J'adore les arbres !", "Encore plus d'herbe, s'il te plaît !"],
+    requestTile: Tile.Tree,
+    requestText: "Plante un arbre près de moi !",
+    thanksText: "Merci pour l'arbre !",
   },
   {
     id: "etang",
@@ -42,6 +51,9 @@ export const HABITATS: ReadonlyArray<HabitatDef> = [
     center: Tile.Water,
     required: [{ tile: Tile.Grass, count: 2 }],
     wishes: ["L'eau est si fraîche !", "Je veux un plus grand étang !"],
+    requestTile: Tile.Water,
+    requestText: "J'aimerais plus d'eau près de moi !",
+    thanksText: "Merci pour l'eau !",
   },
   {
     id: "clairiere",
@@ -52,6 +64,9 @@ export const HABITATS: ReadonlyArray<HabitatDef> = [
     center: Tile.Grass,
     required: [{ tile: Tile.Tree, count: 3 }],
     wishes: ["Quelle belle clairière !", "J'aime le soleil !"],
+    requestTile: Tile.Grass,
+    requestText: "Fais pousser de l'herbe près de moi !",
+    thanksText: "Merci pour l'herbe !",
   },
   {
     id: "prairie",
@@ -62,6 +77,9 @@ export const HABITATS: ReadonlyArray<HabitatDef> = [
     center: Tile.Flower,
     required: [{ tile: Tile.Flower, count: 2 }],
     wishes: ["Je veux des fleurs !", "Vive les fleurs colorées !"],
+    requestTile: Tile.Flower,
+    requestText: "Sème des fleurs près de moi !",
+    thanksText: "Merci pour les fleurs !",
   },
 ];
 

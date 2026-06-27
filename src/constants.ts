@@ -52,3 +52,8 @@ export const SAVE_KEY = "mayden-jeu:v1";
 export const XP_PER_LEVEL = 20;
 export const XP_PER_HABITAT = 10;
 export const XP_PER_REQUEST = 20;
+/** Reward for fulfilling a creature's idle mini-request. */
+export const XP_PER_WISH = 5;
+
+/** Length of a full day→night→day cycle, in milliseconds. */
+export const DAY_NIGHT_MS = 36000;

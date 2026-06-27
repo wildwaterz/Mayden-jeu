@@ -1,5 +1,6 @@
 import Phaser from "phaser";
 import {
+  DAY_NIGHT_MS,
   GRID_COLS,
   GRID_PIXEL_HEIGHT,
   GRID_PIXEL_WIDTH,
@@ -15,6 +16,7 @@ import {
   XP_PER_HABITAT,
   XP_PER_LEVEL,
   XP_PER_REQUEST,
+  XP_PER_WISH,
 } from "../constants";
 import { drawSpriteTexture, drawTerrainTile } from "../pixelArt";
 import { CREATURE_ART, PALETTE, PLAYER_ART, TREE_ART } from "../sprites";
@@ -34,7 +36,22 @@ interface CreatureSprite {
   def: HabitatDef;
   homeX: number;
   homeY: number;
+  homeR: number;
+  homeC: number;
+  request: Tile | null;
+  marker: Phaser.GameObjects.Text | null;
 }
+
+const SURROUND: ReadonlyArray<readonly [number, number]> = [
+  [-1, -1],
+  [-1, 0],
+  [-1, 1],
+  [0, -1],
+  [0, 1],
+  [1, -1],
+  [1, 0],
+  [1, 1],
+];
 
 interface SaveData {
   v: 1;
@@ -141,6 +158,7 @@ export class GameScene extends Phaser.Scene {
       }
     }
 
+    this.createDayNight();
     this.createControlBar();
     this.createHud();
     this.createDexPanel();
@@ -148,6 +166,33 @@ export class GameScene extends Phaser.Scene {
     this.registerInput();
     this.startCreatureLife();
     this.refreshHud();
+  }
+
+  update(): void {
+    // Keep each creature's request marker hovering above it as it wanders.
+    for (const cs of this.creatureSprites) {
+      if (cs.marker) {
+        cs.marker.setPosition(cs.sprite.x, cs.sprite.y - TILE_SIZE * 0.5);
+      }
+    }
+  }
+
+  /** A looping ambient tint that cycles the world from day to night. */
+  private createDayNight(): void {
+    const overlay = this.add
+      .rectangle(0, 0, GRID_PIXEL_WIDTH, GRID_PIXEL_HEIGHT, 0x0a1233, 0)
+      .setOrigin(0, 0)
+      .setDepth(65);
+    const phase = { a: 0 };
+    this.tweens.add({
+      targets: phase,
+      a: 0.5,
+      duration: DAY_NIGHT_MS / 2,
+      yoyo: true,
+      repeat: -1,
+      ease: "Sine.InOut",
+      onUpdate: () => overlay.setFillStyle(0x0a1233, phase.a),
+    });
   }
 
   // --- Textures ---------------------------------------------------------
@@ -393,6 +438,7 @@ export class GameScene extends Phaser.Scene {
   private applyTile(r: number, c: number, tile: Tile): void {
     this.setTile(r, c, tile);
     this.checkHabitatsNear(r, c);
+    this.checkRequests(r, c);
     this.saveGame();
   }
 
@@ -485,7 +531,16 @@ export class GameScene extends Phaser.Scene {
       this.tweens.add({ targets: creature, y: homeY, alpha: 1, duration: 450, ease: "Back.Out" });
     }
 
-    this.creatureSprites.push({ sprite: creature, def, homeX, homeY });
+    this.creatureSprites.push({
+      sprite: creature,
+      def,
+      homeX,
+      homeY,
+      homeR: r,
+      homeC: c,
+      request: null,
+      marker: null,
+    });
   }
 
   /** Periodic idle wandering + occasional happy hop for every creature. */
@@ -523,7 +578,12 @@ export class GameScene extends Phaser.Scene {
             });
           }
 
-          if (Phaser.Math.Between(0, 4) === 0 && def.wishes.length > 0) {
+          if (cs.request !== null) continue;
+
+          const roll = Phaser.Math.Between(0, 4);
+          if (roll === 0) {
+            this.maybeStartRequest(cs);
+          } else if (roll === 1 && def.wishes.length > 0) {
             const wish = def.wishes[Phaser.Math.Between(0, def.wishes.length - 1)];
             this.showWishBubble(sprite, wish);
           }
@@ -544,7 +604,7 @@ export class GameScene extends Phaser.Scene {
         align: "center",
       })
       .setOrigin(0.5, 1)
-      .setDepth(60);
+      .setDepth(75);
 
     this.tweens.add({
       targets: label,
@@ -554,6 +614,78 @@ export class GameScene extends Phaser.Scene {
       onComplete: () => label.destroy(),
     });
     this.tweens.add({ targets: label, alpha: 0, delay: 1200, duration: 600 });
+  }
+
+  /** Possibly have a creature ask the player to place a tile nearby. */
+  private maybeStartRequest(cs: CreatureSprite): void {
+    const desired = cs.def.requestTile;
+    let hasDesired = false;
+    let hasWorkable = false;
+    for (const [dr, dc] of SURROUND) {
+      const nr = cs.homeR + dr;
+      const nc = cs.homeC + dc;
+      if (!this.inBounds(nr, nc)) continue;
+      const t = this.tiles[nr][nc];
+      if (t === desired) hasDesired = true;
+      if (t === Tile.Wasteland || t === Tile.Grass) hasWorkable = true;
+    }
+    // Only ask if it's a real, achievable task.
+    if (hasDesired || !hasWorkable) return;
+
+    cs.request = desired;
+    cs.marker = this.add
+      .text(cs.sprite.x, cs.sprite.y - TILE_SIZE * 0.5, "!", {
+        fontFamily: "monospace",
+        fontSize: "20px",
+        color: "#ffe14d",
+        stroke: "#5a3d00",
+        strokeThickness: 3,
+      })
+      .setOrigin(0.5, 1)
+      .setDepth(75);
+    this.tweens.add({
+      targets: cs.marker,
+      scaleX: 1.25,
+      scaleY: 1.25,
+      duration: 500,
+      yoyo: true,
+      repeat: -1,
+      ease: "Sine.InOut",
+    });
+    this.showWishBubble(cs.sprite, cs.def.requestText);
+  }
+
+  /** A tile changed at (r,c); fulfill any creature request it satisfies. */
+  private checkRequests(r: number, c: number): void {
+    for (const cs of this.creatureSprites) {
+      if (cs.request === null) continue;
+      const within =
+        Math.abs(r - cs.homeR) <= 1 &&
+        Math.abs(c - cs.homeC) <= 1 &&
+        !(r === cs.homeR && c === cs.homeC);
+      if (!within) continue;
+      if (this.tiles[r][c] !== cs.request) continue;
+      this.fulfillRequest(cs);
+    }
+  }
+
+  private fulfillRequest(cs: CreatureSprite): void {
+    cs.request = null;
+    cs.marker?.destroy();
+    cs.marker = null;
+    this.addXp(XP_PER_WISH);
+    playAttract();
+    this.showWishBubble(cs.sprite, `${cs.def.thanksText} +${XP_PER_WISH} XP`);
+    this.tweens.add({
+      targets: cs.sprite,
+      scaleX: 1.25,
+      scaleY: 1.25,
+      duration: 150,
+      yoyo: true,
+      ease: "Quad.Out",
+    });
+    this.refreshHud();
+    this.saveGame();
   }
 
   private habitatKey(def: HabitatDef, r: number, c: number): string {
