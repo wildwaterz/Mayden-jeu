@@ -19,7 +19,7 @@ import {
   XP_PER_WISH,
 } from "../constants";
 import { drawSpriteTexture, drawTerrainTile } from "../pixelArt";
-import { CREATURE_ART, PALETTE, PLAYER_ART, TREE_ART } from "../sprites";
+import { CREATURE_ART, CREATURE_SPRITES, PALETTE, PLAYER_ART, TREE_ART } from "../sprites";
 import { creatureTextureKey, HABITATS, type HabitatDef } from "../habitats";
 import { playAttract, playRequestComplete, unlockAudio } from "../audio";
 
@@ -210,19 +210,19 @@ export class GameScene extends Phaser.Scene {
     drawSpriteTexture(this, TEX.player, PLAYER_ART, PALETTE, PIXEL_SCALE);
 
     for (const habitat of HABITATS) {
-      drawSpriteTexture(
-        this,
-        creatureTextureKey(habitat.id),
-        CREATURE_ART,
-        {
-          ".": null,
-          q: habitat.creatureBase,
-          Q: habitat.creatureDark,
-          e: 0x222831,
-          m: 0x8a2f5e,
-        },
-        PIXEL_SCALE,
-      );
+      const spec = CREATURE_SPRITES[habitat.id];
+      if (spec) {
+        drawSpriteTexture(this, creatureTextureKey(habitat.id), spec.art, spec.palette, PIXEL_SCALE);
+      } else {
+        // Fallback: recolor the generic creature for habitats without bespoke art.
+        drawSpriteTexture(
+          this,
+          creatureTextureKey(habitat.id),
+          CREATURE_ART,
+          { ".": null, q: habitat.creatureBase, Q: habitat.creatureDark, e: 0x222831, m: 0x8a2f5e },
+          PIXEL_SCALE,
+        );
+      }
     }
   }
 
