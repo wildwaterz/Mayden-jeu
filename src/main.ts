@@ -8,7 +8,8 @@ const config: Phaser.Types.Core.GameConfig = {
   width: GAME_WIDTH,
   height: GAME_HEIGHT,
   backgroundColor: "#2c3548",
-  pixelArt: false,
+  pixelArt: true,
+  roundPixels: true,
   scene: [GameScene],
 };
 

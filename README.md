@@ -46,7 +46,17 @@ Then open the URL Vite prints (default http://localhost:5173).
 
 ```
 index.html              # Page shell that mounts the game
-src/main.ts             # Phaser game bootstrap
-src/constants.ts        # Grid size, tile types, palette
+src/main.ts             # Phaser game bootstrap (pixel-art render config)
+src/constants.ts        # Grid size, tile types, texture keys, palette
+src/pixelArt.ts         # Builds textures from code-defined pixel grids
+src/sprites.ts          # Pixel-art sprite grids (edit these to change art!)
 src/scenes/GameScene.ts # Core terraform → habitat → creature loop
 ```
+
+## Art style
+
+The game uses a **2D pixel-art** style. All art is defined in code as small
+character grids in `src/sprites.ts` (with the palette at the top of that file)
+and terrain tiles are generated procedurally in `src/pixelArt.ts`. There are no
+binary image assets, so sprites are easy to tweak by hand or with AI agents —
+change a row of characters and the texture updates on reload.

@@ -1,4 +1,6 @@
-export const TILE_SIZE = 48;
+export const BASE_TILE_PX = 16;
+export const PIXEL_SCALE = 3;
+export const TILE_SIZE = BASE_TILE_PX * PIXEL_SCALE; // 48
 export const GRID_COLS = 12;
 export const GRID_ROWS = 10;
 
@@ -11,16 +13,21 @@ export enum Tile {
   Tree = "tree",
 }
 
-export const COLORS = {
-  wasteland: 0x6b5a45,
-  wastelandAlt: 0x5f4f3c,
-  grass: 0x5bbf5a,
-  grassAlt: 0x52b152,
-  treeTrunk: 0x6b4423,
-  treeCanopy: 0x2f8f3a,
-  player: 0xff8fce,
-  playerOutline: 0xd95fa8,
-  creature: 0x7fd4e8,
-  creatureOutline: 0x3fa9c4,
-  text: "#ffffff",
+/** Texture keys built at runtime in {@link GameScene}. */
+export const TEX = {
+  wastelandA: "wasteland_a",
+  wastelandB: "wasteland_b",
+  grassA: "grass_a",
+  grassB: "grass_b",
+  tree: "tree",
+  player: "player",
+  creature: "creature",
 } as const;
+
+/** Base colors used to generate the terrain tile textures. */
+export const TERRAIN = {
+  wasteland: { base: 0x8a7551, dark: 0x6b5a3c, light: 0x9c895f },
+  grass: { base: 0x57c357, dark: 0x3f9e44, light: 0x7ee07a },
+} as const;
+
+export const HUD_TEXT_COLOR = "#ffffff";
